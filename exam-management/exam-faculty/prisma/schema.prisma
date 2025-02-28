@@ -1,0 +1,93 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  password      String
+  role          Role      @default(COORDINATOR)
+  facultyInfo   Faculty?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  @@map("users")
+}
+
+model Faculty {
+  id          String    @id @default(uuid())
+  userId      String    @unique
+  user        User      @relation(fields: [userId], references: [id])
+  department  String
+  subjects    String[]
+  createdAt   DateTime  @default(now())
+
+  Attendance Attendance[]
+  @@map("faculty")
+}
+
+model Student {
+  id            String    @id @default(uuid())
+  rollNumber    String    @unique
+  fullName      String
+  department    String
+  semester      Int
+  createdAt     DateTime  @default(now())
+
+  ExamCenter ExamCenter[]
+
+  Attendance Attendance[]
+  @@map("student")
+}
+
+model ExamSchedule {
+  id           String     @id @default(uuid())
+  subject      String
+  date         DateTime
+  duration     Int
+  centers      ExamCenter[]
+  departments  String[]
+  semesters    Int[]
+  createdAt    DateTime   @default(now())
+  @@map("examschedule")
+}
+
+model ExamCenter {
+  id           String    @id @default(uuid())
+  name         String
+  capacity     Int
+  available    Int      @default(0)
+  room         String   @default("LH")
+  schedule     ExamSchedule? @relation(fields: [scheduleId], references: [id])
+  scheduleId   String?
+  assignments  Student[]
+  createdAt    DateTime  @default(now())
+  @@map("examcenter")
+}
+
+model Attendance {
+  id          String    @id @default(uuid())
+  student     Student   @relation(fields: [studentId], references: [id])
+  studentId   String
+  faculty     Faculty   @relation(fields: [facultyId], references: [id])
+  facultyId   String
+  present     Boolean
+  timestamp   DateTime  @default(now())
+  course      String
+  @@map("attendance")
+}
+
+enum Role {
+  COORDINATOR
+  FACULTY
+}

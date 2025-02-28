@@ -1,0 +1,182 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model users {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      role     @default(FACULTY)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  faculty   faculty?
+  admin     admin?
+}
+
+enum role {
+  ADMIN
+  FACULTY
+}
+
+model admin {
+  id        String   @id @default(cuid())
+  usersId    String   @unique
+  users      users     @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model faculty {
+  id                String              @id @default(cuid())
+  usersId            String              @unique
+  users              users                @relation(fields: [usersId], references: [id], onDelete: Cascade)
+  department        department
+  designation       String
+  contactNumber     String?
+  examDuties        examduty[]
+  subjectFaculty    subjectfaculty[]
+  attendanceReports attendancereport[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+}
+
+model student {
+  id             String           @id @default(cuid())
+  registerNumber String           @unique
+  name           String
+  department     department
+  semester       Int
+  section        String?
+  examAttendance examattendance[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model subject {
+  id              String           @id @default(cuid())
+  code            String           @unique
+  name            String
+  department      department
+  semester        Int
+  subjectFaculty  subjectfaculty[]
+  examSchedules   examschedule[]
+  examAttendance  examattendance[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+}
+
+model subjectfaculty {
+  id        String   @id @default(cuid())
+  subjectId String
+  facultyId String
+  subject   subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  faculty   faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([subjectId, facultyId])
+}
+
+model classroom {
+  id            String         @id @default(cuid())
+  name          String         @unique
+  capacity      Int
+  building      String?
+  floor         Int?
+  examSchedules examschedule[]
+  examDuties    examduty[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+}
+
+model examschedule {
+  id             String           @id @default(cuid())
+  subjectId      String
+  subject        subject          @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  classroomId    String
+  classroom      classroom        @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  date           DateTime
+  startTime      DateTime
+  endTime        DateTime
+  examDuties     examduty[]
+  examAttendance examattendance[]
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+}
+
+model examduty {
+  id                String              @id @default(cuid())
+  examScheduleId    String
+  examSchedule      examschedule        @relation(fields: [examScheduleId], references: [id], onDelete: Cascade)
+  facultyId         String
+  faculty           faculty             @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  classroomId       String
+  classroom         classroom           @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+  status            dutystatus          @default(ASSIGNED)
+  attendanceReports attendancereport[]
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@unique([examScheduleId, facultyId])
+}
+
+model examattendance {
+  id             String            @id @default(cuid())
+  examScheduleId String
+  examSchedule   examschedule      @relation(fields: [examScheduleId], references: [id], onDelete: Cascade)
+  studentId      String
+  student        student           @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  subjectId      String
+  subject        subject           @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  status         attendancestatus  @default(ABSENT)
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@unique([examScheduleId, studentId])
+}
+
+model attendancereport {
+  id         String   @id @default(cuid())
+  examDutyId String
+  examDuty   examduty @relation(fields: [examDutyId], references: [id], onDelete: Cascade)
+  facultyId  String
+  faculty    faculty  @relation(fields: [facultyId], references: [id], onDelete: Cascade)
+  present    Int
+  absent     Int
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([examDutyId])
+}
+
+enum department {
+  CSE
+  ECE
+  EEE
+  MECH
+  CIVIL
+  IT
+}
+
+enum dutystatus {
+  ASSIGNED
+  CONFIRMED
+  COMPLETED
+  ABSENT
+}
+
+enum attendancestatus {
+  PRESENT
+  ABSENT
+  MALPRACTICE
+}
